@@ -52,7 +52,7 @@ function App() {
                   margin: 'auto 0%'
                 }}
               >
-                <Button type='link'>https://todo.com?{query}</Button>
+                <Button type='link'>{window.location.href}?{query}</Button>
               </Col>
             </Row>
           </div>
