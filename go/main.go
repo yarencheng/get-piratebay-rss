@@ -22,9 +22,78 @@ var (
 	debug = flag.Bool("debug", false, "enable debug mode")
 )
 
-func handler(c *gin.Context) {
+func rssHandler(c *gin.Context) {
 
-	c.String(200, "OK")
+	apibayURL := "https://apibay.org/q.php?" + c.Request.URL.RawQuery
+
+	resp, err := http.Get(apibayURL)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Str("apibayUrl", apibayURL).
+			Msg("Failed to query apibay.org")
+		c.Abort()
+		return
+	}
+	defer resp.Body.Close()
+
+	items := []map[string]interface{}{}
+	err = json.NewDecoder(resp.Body).Decode(&items)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Msg("Failed decode responce body")
+		c.Abort()
+		return
+	}
+
+	feed := &feeds.Feed{
+		Title:       "",
+		Link:        &feeds.Link{Href: ""},
+		Description: "",
+	}
+
+	for _, item := range items {
+
+		log.Debug().
+			Interface("item", item).
+			Send()
+
+		added, err := strconv.ParseInt(item["added"].(string), 10, 64)
+		if err != nil {
+			log.Warn().
+				Err(err).
+				Str("added", item["added"].(string)).
+				Msg("parse int string failed")
+			c.Abort()
+			return
+		}
+		created := time.Unix(added, 0)
+
+		feed.Items = append(feed.Items, &feeds.Item{
+			Title:       item["name"].(string),
+			Link:        &feeds.Link{Href: "magnet:?xt=urn:btih:" + item["info_hash"].(string)},
+			Description: fmt.Sprintf("%v", item),
+			Enclosure: &feeds.Enclosure{
+				Url:    "magnet:?xt=urn:btih:" + item["info_hash"].(string),
+				Type:   "application/x-bittorrent",
+				Length: item["size"].(string),
+			},
+			Created: created,
+		})
+	}
+
+	rss, err := feed.ToRss()
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Msg("Failed get RSS feed")
+		c.Abort()
+		return
+	}
+
+	c.Header("Content-Type", "application/xml; charset=utf-8")
+	c.String(http.StatusOK, rss)
 }
 
 func main() {
@@ -60,80 +129,9 @@ func main() {
 
 	// route
 
-	r.GET("/", func(c *gin.Context) {
-
-		apibayURL := "https://apibay.org/q.php?" + c.Request.URL.RawQuery
-
-		resp, err := http.Get(apibayURL)
-		if err != nil {
-			log.Warn().
-				Err(err).
-				Str("apibayUrl", apibayURL).
-				Msg("Failed to query apibay.org")
-			c.Abort()
-			return
-		}
-		defer resp.Body.Close()
-
-		items := []map[string]interface{}{}
-		err = json.NewDecoder(resp.Body).Decode(&items)
-		if err != nil {
-			log.Warn().
-				Err(err).
-				Msg("Failed decode responce body")
-			c.Abort()
-			return
-		}
-
-		feed := &feeds.Feed{
-			Title:       "",
-			Link:        &feeds.Link{Href: ""},
-			Description: "",
-		}
-
-		for _, item := range items {
-
-			log.Debug().
-				Interface("item", item).
-				Send()
-
-			added, err := strconv.ParseInt(item["added"].(string), 10, 64)
-			if err != nil {
-				log.Warn().
-					Err(err).
-					Str("added", item["added"].(string)).
-					Msg("parse int string failed")
-				c.Abort()
-				return
-			}
-			created := time.Unix(added, 0)
-
-			feed.Items = append(feed.Items, &feeds.Item{
-				Title:       item["name"].(string),
-				Link:        &feeds.Link{Href: "magnet:?xt=urn:btih:" + item["info_hash"].(string)},
-				Description: fmt.Sprintf("%v", item),
-				Enclosure: &feeds.Enclosure{
-					Url:    "magnet:?xt=urn:btih:" + item["info_hash"].(string),
-					Type:   "application/x-bittorrent",
-					Length: item["size"].(string),
-				},
-				Created: created,
-			})
-
-			break
-		}
-
-		rss, err := feed.ToRss()
-		if err != nil {
-			log.Warn().
-				Err(err).
-				Msg("Failed get RSS feed")
-			c.Abort()
-			return
-		}
-
-		c.Header("Content-Type", "application/xml; charset=utf-8")
-		c.String(http.StatusOK, rss)
+	r.GET("/api", rssHandler)
+	r.NoRoute(func(c *gin.Context) {
+		c.File("public" + c.Request.URL.EscapedPath())
 	})
 
 	// http server
