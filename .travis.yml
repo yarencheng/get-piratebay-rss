@@ -1,0 +1,10 @@
+deploy:
+  provider: heroku
+  app: get-piratebay-rss
+  api_key:
+    secure: $HEROKU_KEY
+  on:
+    branch: master
+  run:
+    - heroku container:push web
+    - heroku container:release web
