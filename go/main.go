@@ -20,6 +20,7 @@ import (
 
 var (
 	debug = flag.Bool("debug", false, "enable debug mode")
+	port  = flag.Int("port", 80, "http server port")
 )
 
 func rssHandler(c *gin.Context) {
@@ -136,7 +137,7 @@ func main() {
 
 	// http server
 
-	err := endless.ListenAndServe(":80", r)
+	err := endless.ListenAndServe(fmt.Sprintf(":%d", *port), r)
 	if err != nil {
 		log.Fatal().AnErr("Failed to start http server", err)
 	}

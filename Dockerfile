@@ -24,4 +24,4 @@ WORKDIR /workdir
 COPY --from=go /src/go/server server
 COPY --from=node /src/ui/build/. /workdir/public/.
 
-CMD [ "./server" ]
+CMD ./server -port=$PORT
