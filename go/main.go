@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/fvbock/endless"
@@ -96,6 +97,17 @@ func main() {
 				Interface("item", item).
 				Send()
 
+			added, err := strconv.ParseInt(item["added"].(string), 10, 64)
+			if err != nil {
+				log.Warn().
+					Err(err).
+					Str("added", item["added"].(string)).
+					Msg("parse int string failed")
+				c.Abort()
+				return
+			}
+			created := time.Unix(added, 0)
+
 			feed.Items = append(feed.Items, &feeds.Item{
 				Title:       item["name"].(string),
 				Link:        &feeds.Link{Href: "magnet:?xt=urn:btih:" + item["info_hash"].(string)},
@@ -105,8 +117,10 @@ func main() {
 					Type:   "application/x-bittorrent",
 					Length: item["size"].(string),
 				},
+				Created: created,
 			})
 
+			break
 		}
 
 		rss, err := feed.ToRss()
