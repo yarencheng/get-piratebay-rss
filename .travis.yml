@@ -1,10 +1,8 @@
-deploy:
-  provider: heroku
-  app: get-piratebay-rss
-  api_key:
-    secure: $HEROKU_KEY
-  on:
-    branch: master
-  run:
-    - heroku container:push web
-    - heroku container:release web
+sudo: required
+
+before_script:
+  - wget -qO- https://toolbelt.heroku.com/install.sh | sh
+
+script:
+  - heroku container:push web -a get-piratebay-rss
+  - heroku container:release web -a get-piratebay-rss
