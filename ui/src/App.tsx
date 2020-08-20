@@ -18,7 +18,16 @@ function App() {
     >
       <Content>
 
-        <Space direction='vertical' size={100}>
+        <Space
+          style={{
+            paddingTop: 20,
+          }}
+          direction='vertical'
+          size={80}
+        >
+
+          <Title level={1}>Get Pirate Bay RSS Feed</Title>
+
           <Title level={4}>1. Search anything you like in <a href='https://thepiratebay.org'>https://thepiratebay.org</a></Title>
 
           <div>
@@ -52,7 +61,7 @@ function App() {
                   margin: 'auto 0%'
                 }}
               >
-                <Button type='link'>{window.location.href}?{query}</Button>
+                <Button type='link' href={window.location.href + 'api?' + query}>{window.location.href}api?{query}</Button>
               </Col>
             </Row>
           </div>
